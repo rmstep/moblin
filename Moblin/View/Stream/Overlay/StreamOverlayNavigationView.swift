@@ -186,8 +186,8 @@ private struct MapView: View {
     private func serLongPressLocation(coordinate: CLLocationCoordinate2D) {
         let placeDescriptor = PlaceDescriptor(representations: [.coordinate(coordinate)], commonName: nil)
         let request = MKMapItemRequest(placeDescriptor: placeDescriptor)
-        Task {
-            navigation.longPressLocation = try? await request.mapItem
+        request.getMapItem { mapItem, _ in
+            navigation.longPressLocation = mapItem
             navigation.destination = nil
         }
     }
