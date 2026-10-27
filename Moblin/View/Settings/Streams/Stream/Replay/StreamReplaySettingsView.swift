@@ -257,6 +257,15 @@ struct StreamReplaySettingsView: View {
                         }
                     }
             }
+            Section {
+                NavigationLink {
+                    ReplayPresetsSettingsView(replay: database.replay)
+                } label: {
+                    Label("Instant replay buttons", systemImage: "memories")
+                }
+            } footer: {
+                Text("Multiple instant replay buttons with their own name, duration, speed and layout.")
+            }
             if database.showAllSettings {
                 LayoutView(model: model, database: database, replay: replay)
                 Section {

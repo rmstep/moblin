@@ -245,6 +245,8 @@ struct QuickButtonsButtonSettingsView: View {
             switch button.type {
             case .blackScreen:
                 QuickButtonStealthModeView(model: model, stealthMode: model.stealthMode)
+            case .instantReplayPreset1, .instantReplayPreset2, .instantReplayPreset3, .instantReplayPreset4:
+                ReplayPresetQuickButtonSettingsView(type: button.type)
             default:
                 EmptyView()
             }

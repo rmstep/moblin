@@ -101,6 +101,8 @@ extension Model {
             return false
         case .photoShoot:
             return false
+        case .instantReplayPreset1, .instantReplayPreset2, .instantReplayPreset3, .instantReplayPreset4:
+            return false
         default:
             return true
         }

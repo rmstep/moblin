@@ -10,10 +10,14 @@ class ReplayProvider: ObservableObject {
     @Published var speed: SettingsReplaySpeed? = .one
     @Published var instantReplayCountdown = 0
     @Published var timeLeft = 0
+    // Which instant replay preset (if any) is counting down / playing.
+    @Published var countdownPresetId: UUID?
+    @Published var playingPresetId: UUID?
 }
 
 extension Model {
     func saveReplay(start: Double? = nil,
+                    stop: Double? = nil,
                     delay: Int? = nil,
                     completion: (@MainActor (ReplaySettings) -> Void)? = nil) -> Bool
     {
@@ -31,7 +35,7 @@ extension Model {
                     }
                     let replaySettings = self.replaysStorage.createReplay()
                     replaySettings.start = start ?? self.database.replay.start
-                    replaySettings.stop = self.database.replay.stop
+                    replaySettings.stop = stop ?? self.database.replay.stop
                     replaySettings.duration = file.duration
                     try? FileManager.default.copyItem(
                         at: file.url,
@@ -87,9 +91,44 @@ extension Model {
             }
         }
         if savingStarted {
+            replay.countdownPresetId = nil
             replay.instantReplayCountdown = delay + 1
             instantReplayCountdownTick()
         }
+    }
+
+    func instantReplay(preset: SettingsReplayPreset) {
+        guard stream.replay.enabled else {
+            makeReplayIsNotEnabledToast()
+            return
+        }
+        guard replay.instantReplayCountdown == 0 else {
+            return
+        }
+        let delay = preset.postTriggerDelay
+        let stop = SettingsReplay.stop
+        let start = stop - preset.clampedDuration()
+        let savingStarted = saveReplay(start: start, stop: stop, delay: delay) { video in
+            self.loadReplay(video: video) {
+                self.replay.isPlaying = true
+                self.replay.playingPresetId = preset.id
+                if !self.replayPlay(preset: preset) {
+                    self.replay.isPlaying = false
+                }
+            }
+        }
+        if savingStarted {
+            replay.countdownPresetId = preset.id
+            replay.instantReplayCountdown = delay + 1
+            instantReplayCountdownTick()
+        }
+    }
+
+    func instantReplay(presetIndex: Int) {
+        guard presetIndex >= 0, presetIndex < database.replay.presets.count else {
+            return
+        }
+        instantReplay(preset: database.replay.presets[presetIndex])
     }
 
     private func instantReplayCountdownTick() {
@@ -143,8 +182,11 @@ extension Model {
         replayFrameExtractor?.seek(offset: replaySettings.thumbnailOffset())
     }
 
-    func replayPlay() -> Bool {
+    func replayPlay(preset: SettingsReplayPreset? = nil) -> Bool {
         replayCancel()
+        if preset == nil {
+            self.replay.playingPresetId = nil
+        }
         guard let replayVideo, let replaySettings else {
             return false
         }
@@ -168,9 +210,12 @@ extension Model {
             video: replayVideo,
             start: replaySettings.startFromVideoStart(),
             stop: replaySettings.stopFromVideoStart(),
-            speed: database.replay.speed.toNumber(),
+            speed: preset?.speed.toNumber() ?? database.replay.speed.toNumber(),
             size: stream.dimensions(),
-            layout: replay.layout,
+            layout: preset?.replayLayout.toWidgetLayout() ?? replay.layout,
+            crop: preset?.cropForEffect(),
+            border: preset?.replayBorder ?? false,
+            liveVideoLayout: preset?.liveVideoLayoutForEffect(),
             transitionMode: transitionMode,
             pixelFormatType: stream.colorRange.pixelFormatType(),
             delegate: self

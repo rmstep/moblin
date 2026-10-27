@@ -106,6 +106,65 @@ private struct InstantReplayView: View {
     }
 }
 
+private struct InstantReplayPresetView: View {
+    let model: Model
+    @ObservedObject var replay: ReplayProvider
+    @ObservedObject var button: SettingsQuickButton
+    let size: CGFloat
+
+    private func preset() -> SettingsReplayPreset? {
+        guard let index = button.type.replayPresetIndex(), index < model.database.replay.presets.count else {
+            return nil
+        }
+        return model.database.replay.presets[index]
+    }
+
+    private func action() {
+        if let currentPreset = preset() {
+            model.instantReplay(preset: currentPreset)
+        }
+    }
+
+    private func numberView(_ number: Int) -> some View {
+        Text(String(number))
+            .font(.system(size: 25))
+            .frame(width: size, height: size)
+            .foregroundStyle(.white)
+            .background(button.backgroundColor.color())
+            .clipShape(Circle())
+            .onTapGesture {
+                action()
+            }
+            .onLongPressGesture {
+                model.showQuickButtonSettings(type: button.type)
+            }
+    }
+
+    var body: some View {
+        let currentPreset = preset()
+        if replay.isPlaying, let currentPreset, replay.playingPresetId == currentPreset.id {
+            numberView(replay.timeLeft)
+        } else if replay.instantReplayCountdown > 0,
+                  let currentPreset,
+                  replay.countdownPresetId == currentPreset.id
+        {
+            numberView(replay.instantReplayCountdown)
+                .overlay(Circle().stroke(.red, lineWidth: 2).frame(width: size - 2, height: size - 2))
+        } else {
+            ZStack {
+                QuickButtonImage(model: model,
+                                 quickButtonsSettings: model.database.quickButtonsGeneral,
+                                 button: button,
+                                 buttonSize: size)
+                {
+                    action()
+                }
+                ButtonTextOverlayView(text: currentPreset?.name ?? "")
+            }
+        }
+    }
+}
+
 struct QuickButtonPlaceholderImage: View {
     let size: CGFloat
 
@@ -808,6 +867,8 @@ struct QuickButtonsInnerView: View {
                         }
                     case .instantReplay:
                         InstantReplayView(model: model, replay: model.replay, button: button, size: size)
+                    case .instantReplayPreset1, .instantReplayPreset2, .instantReplayPreset3, .instantReplayPreset4:
+                        InstantReplayPresetView(model: model, replay: model.replay, button: button, size: size)
                     case .connectionPriorities:
                         QuickButtonImage(model: model,
                                          quickButtonsSettings: quickButtonsSettings,

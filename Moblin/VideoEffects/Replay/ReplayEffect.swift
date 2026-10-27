@@ -49,6 +49,10 @@ final class ReplayEffect: VideoEffect, @unchecked Sendable {
     private let transitionMode: ReplayEffectTransitionMode
     private let duration: Double
     private var layout: SettingsWidgetLayout
+    // Instant replay preset extras. nil/false gives the original Moblin behaviour.
+    private let crop: SettingsReplayPresetCrop?
+    private let border: Bool
+    private let liveVideoLayout: SettingsWidgetLayout?
     private var latestTimeLeft = Int.max
     private var stingersState: StingersState = .setup
     private var stingersInReader: ReplayEffectStingerReader?
@@ -66,12 +70,18 @@ final class ReplayEffect: VideoEffect, @unchecked Sendable {
         speed: Double,
         size: CMVideoDimensions,
         layout: SettingsWidgetLayout,
+        crop: SettingsReplayPresetCrop? = nil,
+        border: Bool = false,
+        liveVideoLayout: SettingsWidgetLayout? = nil,
         transitionMode: ReplayEffectTransitionMode,
         pixelFormatType: OSType,
         delegate: any ReplayEffectDelegate
     ) {
         self.speed = speed
         self.layout = layout
+        self.crop = crop
+        self.border = border
+        self.liveVideoLayout = liveVideoLayout
         self.transitionMode = transitionMode
         self.delegate = delegate
         duration = stop - start
@@ -148,21 +158,65 @@ final class ReplayEffect: VideoEffect, @unchecked Sendable {
     }
 
     private func applyLayoutToReplay(_ replayImage: EffectImageCiImage, _ image: CIImage) -> CIImage {
-        replayImage.getCiImage()
+        var replay = replayImage.getCiImage()
+        if let crop {
+            let region = crop.coreImageRegion(replay.extent)
+            replay = replay
+                .cropped(to: region)
+                .translated(x: -region.minX, y: -region.minY)
+        }
+        replay = replay
             .resizeMirror(layout, image.extent.size, false)
             .move(layout, image.extent.size)
+        if border {
+            let borderWidth = max(2, 0.015 * min(replay.extent.width, replay.extent.height))
+            replay = replay.composited(over: CIImage(color: .white)
+                .cropped(to: replay.extent.insetBy(dx: -borderWidth, dy: -borderWidth)))
+        }
+        return replay
             .cropped(to: image.extent)
-            .composited(over: image)
+            .composited(over: makeLiveVideoBackground(image))
+    }
+
+    // The live camera video under the replay. Optionally resized and moved so that the
+    // action can still be followed while the replay plays.
+    private func makeLiveVideoBackground(_ image: CIImage) -> CIImage {
+        guard let liveVideoLayout else {
+            return image
+        }
+        return image
+            .resizeMirror(liveVideoLayout, image.extent.size, false)
+            .move(liveVideoLayout, image.extent.size)
+            .cropped(to: image.extent)
+            .composited(over: CIImage(color: .black).cropped(to: image.extent))
     }
 
     private func applyLayoutToReplayMetalPetal(_ replayImage: EffectImageCiImage,
                                                _ image: MTIImage) -> MTIImage
     {
         let replayImage = replayImage.getMetalPetalImage()
+        var shape = WidgetShape(contentRegion: crop?.metalPetalRegion(replayImage.extent) ?? replayImage.extent)
+        if border {
+            shape.borderWidth = 0.6
+            shape.borderColor = .white
+        }
         return replayImage.resizeMirrorMoveComposited(layout,
                                                       false,
-                                                      image,
-                                                      .init(contentRegion: replayImage.extent))
+                                                      makeLiveVideoBackgroundMetalPetal(image),
+                                                      shape)
+    }
+
+    private func makeLiveVideoBackgroundMetalPetal(_ image: MTIImage) -> MTIImage {
+        guard let liveVideoLayout else {
+            return image
+        }
+        let black = MTIImage(color: MTIColor(red: 0, green: 0, blue: 0, alpha: 1),
+                            sRGB: false,
+                            size: image.extent.size)
+        return image.resizeMirrorMoveComposited(liveVideoLayout,
+                                                false,
+                                                black,
+                                                .init(contentRegion: image.extent))
     }
 
     private func fade(_ input: CIImage, _ target: CIImage, _ ratio: Double) -> CIImage? {

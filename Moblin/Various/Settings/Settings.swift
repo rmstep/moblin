@@ -592,6 +592,7 @@ class SettingsReplay: Codable, ObservableObject {
     @Published var start: Double = 20.0
     @Published var stop: Double = SettingsReplay.stop
     @Published var speed: SettingsReplaySpeed = .one
+    @Published var presets: [SettingsReplayPreset] = []
 
     init() {}
 
@@ -599,6 +600,7 @@ class SettingsReplay: Codable, ObservableObject {
         case start
         case stop
         case speed
+        case presets
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -606,6 +608,7 @@ class SettingsReplay: Codable, ObservableObject {
         try container.encode(.start, start)
         try container.encode(.stop, stop)
         try container.encode(.speed, speed)
+        try container.encode(.presets, presets)
     }
 
     required init(from decoder: any Decoder) throws {
@@ -613,6 +616,7 @@ class SettingsReplay: Codable, ObservableObject {
         start = container.decode(.start, Double.self, 20.0)
         stop = container.decode(.stop, Double.self, SettingsReplay.stop)
         speed = container.decode(.speed, SettingsReplaySpeed.self, .one)
+        presets = container.decode(.presets, [SettingsReplayPreset].self, [])
     }
 }
 
@@ -1363,6 +1367,7 @@ class Database: Codable, ObservableObject {
             addDefaultBitratePresets(database: database)
         }
         addMissingQuickButtons(database: database)
+        addMissingReplayPresets(database: database)
         for button in database.quickButtons
             where button.type != .interactiveChat && button.type != .cameraPreview && button
             .type != .interactiveBrowserWidgets
@@ -2035,6 +2040,12 @@ private func addMissingQuickButtonsPageThree(database: Database) {
                                  imageOn: "memories",
                                  page: page)
     updateQuickButton(database: database, button: button)
+    for type in replayPresetQuickButtonTypes {
+        button = SettingsQuickButton(type: type,
+                                     imageOn: "memories",
+                                     page: page)
+        updateQuickButton(database: database, button: button)
+    }
     button = SettingsQuickButton(type: .djiDevices,
                                  imageOn: "appletvremote.gen1.fill",
                                  imageOff: "appletvremote.gen1",
@@ -2278,6 +2289,7 @@ private func createDefault() -> Database {
     addDefaultZoomPresets(database: database)
     addDefaultBitratePresets(database: database)
     addMissingQuickButtons(database: database)
+    addMissingReplayPresets(database: database)
     addMissingDeepLinkQuickButtons(database: database)
     addScenesToGameController(database: database)
     addMissingBundledLuts(database: database)
