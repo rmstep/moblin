@@ -436,6 +436,49 @@ private struct StreamOverlayTapGridView: View {
     }
 }
 
+private struct ReplayAimOverlayView: View {
+    @ObservedObject var replay: ReplayProvider
+    let size: CGSize
+
+    private func drawCrosshair(context: GraphicsContext, center: CGPoint) {
+        var path = Path()
+        path.move(to: CGPoint(x: center.x - 20, y: center.y))
+        path.addLine(to: CGPoint(x: center.x + 20, y: center.y))
+        path.move(to: CGPoint(x: center.x, y: center.y - 20))
+        path.addLine(to: CGPoint(x: center.x, y: center.y + 20))
+        context.stroke(path, with: .color(.yellow), lineWidth: 2)
+    }
+
+    var body: some View {
+        if replay.awaitingCropTapPresetId != nil {
+            ZStack(alignment: .top) {
+                Canvas { context, _ in
+                    if let crop = replay.aimCrop {
+                        let rect = CGRect(x: crop.x * size.width,
+                                          y: crop.y * size.height,
+                                          width: crop.width * size.width,
+                                          height: crop.height * size.height)
+                        context.stroke(Path(rect), with: .color(.yellow), lineWidth: 2)
+                        drawCrosshair(context: context, center: CGPoint(x: rect.midX, y: rect.midY))
+                    } else {
+                        drawCrosshair(context: context, center: CGPoint(x: size.width / 2, y: size.height / 2))
+                    }
+                }
+                Text("Tap where to zoom")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.black.opacity(0.6))
+                    .clipShape(Capsule())
+                    .padding(.top, 10)
+            }
+            .frame(width: size.width, height: size.height)
+            .allowsHitTesting(false)
+        }
+    }
+}
+
 private struct InteractiveBrowserView: View {
     let browser: Browser
     @ObservedObject var browserEffect: BrowserEffect
@@ -492,6 +535,16 @@ struct MainView: View {
         model.setFocusPointOfInterest(focusPoint: CGPoint(x: x, y: y))
     }
 
+    private func handleStreamTap(size: CGSize, location: CGPoint) {
+        guard model.replay.awaitingCropTapPresetId != nil else {
+            handleTapToFocus(size: size, location: location)
+            return
+        }
+        let x = (location.x / size.width).clamped(to: 0 ... 1)
+        let y = (location.y / size.height).clamped(to: 0 ... 1)
+        model.replayAimTap(x: x, y: y)
+    }
+
     private func handleLeaveTapToFocus() {
         guard model.database.tapToFocus else {
             return
@@ -518,12 +571,13 @@ struct MainView: View {
             ZStack {
                 streamView
                     .onTapGesture(count: 1) {
-                        handleTapToFocus(size: layout.size, location: $0)
+                        handleStreamTap(size: layout.size, location: $0)
                     }
                     .onLongPressGesture {
                         handleLeaveTapToFocus()
                     }
                 StreamOverlayTapGridView(camera: model.camera, size: layout.size)
+                ReplayAimOverlayView(replay: model.replay, size: layout.size)
                 browserWidgets(streamSize: layout.size)
             }
             .frame(width: layout.size.width, height: layout.size.height)

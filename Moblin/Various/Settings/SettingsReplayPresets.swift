@@ -145,6 +145,8 @@ class SettingsReplayPreset: Codable, Identifiable, ObservableObject {
     @Published var speed: SettingsReplaySpeed = .one
     @Published var replayCropEnabled: Bool = false
     @Published var replayCrop: SettingsReplayPresetCrop = .init()
+    @Published var tapToAimCrop: Bool = false
+    @Published var aimZoom: Double = 0.4
     @Published var replayLayout: SettingsReplayPresetLayout = .init()
     @Published var replayBorder: Bool = false
     @Published var liveVideoEnabled: Bool = false
@@ -165,6 +167,8 @@ class SettingsReplayPreset: Codable, Identifiable, ObservableObject {
         case speed
         case replayCropEnabled
         case replayCrop
+        case tapToAimCrop
+        case aimZoom
         case replayLayout
         case replayBorder
         case liveVideoEnabled
@@ -180,6 +184,8 @@ class SettingsReplayPreset: Codable, Identifiable, ObservableObject {
         try container.encode(.speed, speed)
         try container.encode(.replayCropEnabled, replayCropEnabled)
         try container.encode(.replayCrop, replayCrop)
+        try container.encode(.tapToAimCrop, tapToAimCrop)
+        try container.encode(.aimZoom, aimZoom)
         try container.encode(.replayLayout, replayLayout)
         try container.encode(.replayBorder, replayBorder)
         try container.encode(.liveVideoEnabled, liveVideoEnabled)
@@ -195,6 +201,8 @@ class SettingsReplayPreset: Codable, Identifiable, ObservableObject {
         speed = container.decode(.speed, SettingsReplaySpeed.self, .one)
         replayCropEnabled = container.decode(.replayCropEnabled, Bool.self, false)
         replayCrop = container.decode(.replayCrop, SettingsReplayPresetCrop.self, .init())
+        tapToAimCrop = container.decode(.tapToAimCrop, Bool.self, false)
+        aimZoom = container.decode(.aimZoom, Double.self, 0.4)
         replayLayout = container.decode(.replayLayout, SettingsReplayPresetLayout.self, .init())
         replayBorder = container.decode(.replayBorder, Bool.self, false)
         liveVideoEnabled = container.decode(.liveVideoEnabled, Bool.self, false)
@@ -212,6 +220,21 @@ class SettingsReplayPreset: Codable, Identifiable, ObservableObject {
             return nil
         }
         return replayCrop.clamped()
+    }
+
+    func aimCrop(x: Double, y: Double) -> SettingsReplayPresetCrop {
+        let size = min(max(aimZoom, 0.1), 1)
+        return .init(x: min(max(x - size / 2, 0), 1 - size),
+                     y: min(max(y - size / 2, 0), 1 - size),
+                     width: size,
+                     height: size)
+    }
+
+    func previewCrop() -> SettingsReplayPresetCrop {
+        if tapToAimCrop {
+            return aimCrop(x: 0.5, y: 0.5)
+        }
+        return replayCropEnabled ? replayCrop.clamped() : SettingsReplayPresetCrop()
     }
 
     func liveVideoLayoutForEffect() -> SettingsWidgetLayout? {

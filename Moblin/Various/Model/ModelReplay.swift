@@ -13,6 +13,8 @@ class ReplayProvider: ObservableObject {
     // Which instant replay preset (if any) is counting down / playing.
     @Published var countdownPresetId: UUID?
     @Published var playingPresetId: UUID?
+    @Published var awaitingCropTapPresetId: UUID?
+    @Published var aimCrop: SettingsReplayPresetCrop?
 }
 
 extension Model {
@@ -31,6 +33,7 @@ extension Model {
                 DispatchQueue.main.async {
                     self.replay.isSaving = false
                     guard let file else {
+                        self.replayClearAim()
                         return
                     }
                     let replaySettings = self.replaysStorage.createReplay()
@@ -118,6 +121,8 @@ extension Model {
             }
         }
         if savingStarted {
+            replay.aimCrop = nil
+            replay.awaitingCropTapPresetId = preset.tapToAimCrop ? preset.id : nil
             replay.countdownPresetId = preset.id
             replay.instantReplayCountdown = delay + 1
             instantReplayCountdownTick()
@@ -129,6 +134,20 @@ extension Model {
             return
         }
         instantReplay(preset: database.replay.presets[presetIndex])
+    }
+
+    func replayAimTap(x: Double, y: Double) {
+        guard let presetId = replay.awaitingCropTapPresetId,
+              let preset = database.replay.presets.first(where: { $0.id == presetId })
+        else {
+            return
+        }
+        replay.aimCrop = preset.aimCrop(x: x, y: y)
+    }
+
+    private func replayClearAim() {
+        replay.awaitingCropTapPresetId = nil
+        replay.aimCrop = nil
     }
 
     private func instantReplayCountdownTick() {
@@ -187,6 +206,11 @@ extension Model {
         if preset == nil {
             self.replay.playingPresetId = nil
         }
+        var crop = preset?.cropForEffect()
+        if let preset, self.replay.awaitingCropTapPresetId == preset.id, let aimCrop = self.replay.aimCrop {
+            crop = aimCrop
+        }
+        replayClearAim()
         guard let replayVideo, let replaySettings else {
             return false
         }
@@ -213,7 +237,7 @@ extension Model {
             speed: preset?.speed.toNumber() ?? database.replay.speed.toNumber(),
             size: stream.dimensions(),
             layout: preset?.replayLayout.toWidgetLayout() ?? replay.layout,
-            crop: preset?.cropForEffect(),
+            crop: crop,
             border: preset?.replayBorder ?? false,
             liveVideoLayout: preset?.liveVideoLayoutForEffect(),
             transitionMode: transitionMode,

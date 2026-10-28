@@ -102,7 +102,7 @@ private struct ReplayPresetPreviewView: View {
             let liveRect = preset.liveVideoEnabled
                 ? previewRect(preset.liveVideoLayout, canvas, canvas)
                 : CGRect(origin: .zero, size: canvas)
-            let crop = preset.replayCropEnabled ? preset.replayCrop.clamped() : SettingsReplayPresetCrop()
+            let crop = preset.previewCrop()
             let replayContentSize = CGSize(width: crop.width * canvas.width, height: crop.height * canvas.height)
             let replayRect = previewRect(preset.replayLayout, replayContentSize, canvas)
             ZStack(alignment: .topLeading) {
@@ -212,12 +212,28 @@ struct ReplayPresetSettingsView: View {
                 Text("Preview")
             }
             Section {
+                Toggle("Tap to aim", isOn: $preset.tapToAimCrop)
+                if preset.tapToAimCrop {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text("Zoom box size")
+                            Spacer()
+                            GrayTextView(text: "\(Int((preset.aimZoom * 100).rounded())) %")
+                        }
+                        Slider(value: $preset.aimZoom, in: 0.1 ... 1, step: 0.01)
+                    }
+                }
                 Toggle("Crop", isOn: $preset.replayCropEnabled)
                 if preset.replayCropEnabled {
                     ReplayPresetCropEditView(crop: $preset.replayCrop)
                 }
             } header: {
                 Text("Replay crop")
+            } footer: {
+                Text("""
+                With tap to aim, tap the stream preview after pressing the button to pick where to \
+                zoom. You can tap again until the replay starts. If you don't tap, the crop below is used.
+                """)
             }
             Section {
                 ReplayPresetLayoutEditView(layout: $preset.replayLayout, minimumSize: 10)
