@@ -16,6 +16,7 @@ struct ObsSceneMediaSource: Identifiable {
 class QuickButtonObs: ObservableObject {
     var sourceFetchScreenshot = false
     var sourceScreenshotIsFetching = false
+    var sourceScreenshotLatestFetch: ContinuousClock.Instant?
     var recording = false
     var audioVolumeLatest: String = ""
     @Published var streamingState: ObsOutputState = .stopped
@@ -35,6 +36,7 @@ class QuickButtonObs: ObservableObject {
         screenshot = nil
         sourceFetchScreenshot = true
         sourceScreenshotIsFetching = false
+        sourceScreenshotLatestFetch = nil
     }
 
     func stopObsSourceScreenshot() {
@@ -49,7 +51,16 @@ extension Model {
         else {
             return
         }
-        obsWebSocket?.getSourceScreenshot(name: obsQuickButton.currentScene, onSuccess: { data in
+        let now = ContinuousClock.now
+        if stream.obsLowData, let latest = obsQuickButton.sourceScreenshotLatestFetch,
+           latest.duration(to: now) < .seconds(5)
+        {
+            return
+        }
+        obsQuickButton.sourceScreenshotLatestFetch = now
+        obsWebSocket?.getSourceScreenshot(name: obsQuickButton.currentScene,
+                                          width: stream.obsLowData ? 320 : 640,
+                                          onSuccess: { data in
             let screenshot = UIImage(data: data)?.cgImage
             self.obsQuickButton.screenshot = screenshot
             self.obsQuickButton.sourceScreenshotIsFetching = false
@@ -432,6 +443,9 @@ extension Model {
 
     func startObsAudioVolume() {
         obsQuickButton.audioVolumeLatest = noValue
+        guard !stream.obsLowData else {
+            return
+        }
         obsWebSocket?.startAudioVolume()
     }
 

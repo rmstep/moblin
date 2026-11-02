@@ -656,13 +656,14 @@ class ObsWebSocket {
 
     func getSourceScreenshot(
         name: String,
+        width: Int,
         onSuccess: @escaping (Data) -> Void,
         onError: @escaping (String) -> Void
     ) {
         let request = GetSourceScreenshot(
             sourceName: name,
             imageFormat: "jpg",
-            imageWidth: 640,
+            imageWidth: width,
             imageCompressionQuality: 30
         )
         performRequest(type: .getSourceScreenshot, request: request, onError: onError)

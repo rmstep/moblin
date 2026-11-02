@@ -290,7 +290,9 @@ private struct ObsAudioLevelsView: View {
 
     var body: some View {
         Section {
-            if model.isLive {
+            if stream.obsLowData {
+                Text("Off in low data mode.")
+            } else if model.isLive {
                 if !obsQuickButton.audioVolume.isEmpty {
                     Text(obsQuickButton.audioVolume)
                 } else {
@@ -305,12 +307,33 @@ private struct ObsAudioLevelsView: View {
     }
 }
 
+private struct ObsLowDataView: View {
+    let model: Model
+    @ObservedObject var stream: SettingsStream
+
+    var body: some View {
+        Section {
+            Toggle("Low data", isOn: $stream.obsLowData)
+                .onChange(of: stream.obsLowData) { _ in
+                    model.stopObsAudioVolume()
+                    model.startObsAudioVolume()
+                }
+        } footer: {
+            Text("""
+            Updates the snapshot every 5 seconds at a smaller size and turns off audio levels. \
+            Use it on cellular so the panel doesn't slow down your stream.
+            """)
+        }
+    }
+}
+
 private struct ObsConnectedView: View {
     let model: Model
     @ObservedObject var stream: SettingsStream
     @ObservedObject var obsQuickButton: QuickButtonObs
 
     var body: some View {
+        ObsLowDataView(model: model, stream: stream)
         ObsStartStopStreamingView(model: model, obsQuickButton: obsQuickButton)
         ObsStartStopRecordingView(model: model, obsQuickButton: obsQuickButton)
         ObsSnapshotView(obsQuickButton: obsQuickButton)
