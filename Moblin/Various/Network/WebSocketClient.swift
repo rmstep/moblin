@@ -138,10 +138,10 @@ final class WebSocketClient {
             connected = true
             delegate?.webSocketClientConnected(self)
         case let .waiting(error):
-            logger.debug("websocket: Waiting with error \(error.localizedDescription)")
+            logger.info("websocket: Waiting with error \(error), \(connection.pathSummary())")
             handleDisconnected()
         case let .failed(error):
-            logger.debug("websocket: Failed with error \(error.localizedDescription)")
+            logger.info("websocket: Failed with error \(error), \(connection.pathSummary())")
             handleDisconnected()
         case .cancelled:
             logger.debug("websocket: Cancelled")

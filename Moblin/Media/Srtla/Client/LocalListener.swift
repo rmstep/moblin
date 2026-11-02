@@ -45,12 +45,21 @@ class LocalListener: @unchecked Sendable {
         case .ready:
             onReady?(listener.port!.rawValue)
         default:
+            logger.info("srtla: local: Listener state \(state)")
             onError?("bad network state")
         }
     }
 
     private func handleNewListenerConnection(connection: NWConnection) {
         self.connection = connection
+        connection.stateUpdateHandler = { state in
+            switch state {
+            case .ready, .setup, .preparing:
+                break
+            default:
+                logger.info("srtla: local: Connection state \(state), \(connection.pathSummary())")
+            }
+        }
         connection.start(queue: srtlaClientQueue)
     }
 }

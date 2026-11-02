@@ -7,6 +7,16 @@ import Network
 
 private let connectionReceiveBatchSize = 25
 
+extension NWConnection {
+    func pathSummary() -> String {
+        guard let path = currentPath else {
+            return "no path"
+        }
+        let interfaces = path.availableInterfaces.map { "\($0.name)(\($0.type))" }.joined(separator: ",")
+        return "path \(path.status), reason \(path.unsatisfiedReason), interfaces [\(interfaces)]"
+    }
+}
+
 private enum State {
     case idle
     case socketConnecting
@@ -267,7 +277,12 @@ class RemoteConnection: @unchecked Sendable {
     }
 
     private func handleStateUpdate(to state: NWConnection.State) {
-        logger.debug("srtla: \(typeString): State change to \(state)")
+        switch state {
+        case .waiting, .failed:
+            logger.info("srtla: \(typeString): State change to \(state), \(connection?.pathSummary() ?? "")")
+        default:
+            logger.info("srtla: \(typeString): State change to \(state)")
+        }
         switch state {
         case .ready:
             cancelAllTimers()
