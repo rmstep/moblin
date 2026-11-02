@@ -298,6 +298,8 @@ class SrtlaClient: NSObject, @unchecked Sendable {
     }
 
     private func handleNetworkPathUpdate(path: NWPath) {
+        let interfaces = path.uniqueAvailableInterfaces().map { "\($0.name)(\($0.type))" }.joined(separator: ",")
+        logger.info("srtla: Path update \(path.status), reason \(path.unsatisfiedReason), interfaces [\(interfaces)]")
         var newRemoteConnections: [RemoteConnection] = []
         for connection in remoteConnections {
             if let interface = connection.interface {
