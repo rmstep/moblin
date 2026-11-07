@@ -1042,6 +1042,7 @@ extension Model: MediaDelegate {
 
     nonisolated func mediaOnRecorderDataSegment(segment: RecorderDataSegment) {
         DispatchQueue.main.async {
+            self.replayLatestSegmentTime = .now
             self.replayBuffer.appendDataSegment(segment: segment)
         }
     }

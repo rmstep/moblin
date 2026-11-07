@@ -54,7 +54,7 @@ extension Model {
         currentRecording = nil
     }
 
-    func startRecorderIfNeeded() {
+    func startRecorderIfNeeded(useRecordingUrl: Bool = true) {
         guard !isRecorderRecording, isRecording || stream.replay.enabled else {
             return
         }
@@ -63,7 +63,7 @@ extension Model {
         let keyFrameInterval = Int(stream.recording.maxKeyFrameInterval)
         let audioBitrate = Int(stream.recording.audioBitrate)
         media.startRecording(
-            url: isRecording ? currentRecording?.url() : nil,
+            url: isRecording && useRecordingUrl ? currentRecording?.url() : nil,
             replay: stream.replay.enabled,
             videoCodec: stream.recording.videoCodec,
             videoBitrate: bitrate != 0 ? bitrate : nil,

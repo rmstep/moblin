@@ -761,6 +761,7 @@ final class Model: NSObject, ObservableObject {
     var replaySettings: ReplaySettings?
     var replayFrameExtractor: ReplayFrameExtractor?
     var replayVideo: ReplayBufferFile?
+    var replayLatestSegmentTime: ContinuousClock.Instant?
     var replayBuffer = ReplayBuffer()
     let replay = ReplayProvider()
     let sampleBufferReceiver = SampleBufferReceiver()
@@ -1830,6 +1831,7 @@ final class Model: NSObject, ObservableObject {
         updateIngestsSpeed()
         updateBondingStatistics()
         updateLocation()
+        restartReplayRecorderIfStalled(now: monotonicNow)
         updateObsSourceScreenshot()
         updateObsAudioVolume()
         updateBrowserWidgetStatus()

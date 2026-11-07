@@ -26,6 +26,12 @@ extension Model {
         guard !replay.isSaving else {
             return false
         }
+        if isReplayRecorderStalled(now: .now) {
+            restartReplayRecorderIfStalled(now: .now)
+            makeErrorToast(title: String(localized: "Replay is restarting"),
+                           subTitle: String(localized: "Try again in a few seconds."))
+            return false
+        }
         replay.isSaving = true
         let delay = delay ?? stream.replay.postTriggerDelay
         DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(delay)) {
@@ -246,6 +252,23 @@ extension Model {
         )
         media.registerEffectBack(replayEffect!)
         return true
+    }
+
+    private func isReplayRecorderStalled(now: ContinuousClock.Instant) -> Bool {
+        guard stream.replay.enabled, isRecorderRecording, let replayLatestSegmentTime else {
+            return false
+        }
+        return replayLatestSegmentTime.duration(to: now) > .seconds(10)
+    }
+
+    func restartReplayRecorderIfStalled(now: ContinuousClock.Instant) {
+        guard isReplayRecorderStalled(now: now) else {
+            return
+        }
+        logger.info("replay: No new video for 10 seconds. Restarting recorder.")
+        replayLatestSegmentTime = now
+        stopRecorderIfNeeded(forceStop: true)
+        startRecorderIfNeeded(useRecordingUrl: false)
     }
 
     func replayCancel() {
