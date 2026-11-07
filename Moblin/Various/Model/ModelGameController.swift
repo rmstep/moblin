@@ -216,12 +216,12 @@ extension Model {
             setGimbalMovement(x: y, y: -x)
         case .zoom:
             let y = abs(yValue) > thumbStickDeadZone ? yValue : 0
-            handleGameControllerThumbStickZoom(y: y, zoomSpeed: settings.zoomSpeed)
+            handleGameControllerThumbStickZoom(y: y, settings: settings)
         }
     }
 
-    private func handleGameControllerThumbStickZoom(y: Float, zoomSpeed: Float) {
-        let speed = (y * zoomSpeed / 50 * 20).rounded() / 20
+    private func handleGameControllerThumbStickZoom(y: Float, settings: SettingsGameController) {
+        let speed = (y * settings.zoomSpeed / 50 * 20).rounded() / 20
         guard speed != gameControllerZoomSpeed else {
             return
         }
@@ -229,7 +229,9 @@ extension Model {
         if speed == 0 {
             stopZoomSpeed()
         } else {
-            setZoomSpeed(speed: speed)
+            setZoomSpeed(speed: speed,
+                         minimumX: settings.zoomLimitEnabled ? settings.zoomMinimum : nil,
+                         maximumX: settings.zoomLimitEnabled ? settings.zoomMaximum : nil)
         }
     }
 

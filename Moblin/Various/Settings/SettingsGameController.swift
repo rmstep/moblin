@@ -361,6 +361,9 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
     @Published var leftThumbStickFunction: SettingsControllerThumbStickFunction = .unused
     @Published var rightThumbStickFunction: SettingsControllerThumbStickFunction = .unused
     @Published var zoomSpeed: Float = 50
+    @Published var zoomLimitEnabled: Bool = false
+    @Published var zoomMinimum: Float = 1
+    @Published var zoomMaximum: Float = 10
 
     init() {
         var button = SettingsGameControllerButton()
@@ -467,6 +470,9 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
         case leftThumbStickFunction
         case rightThumbStickFunction
         case zoomSpeed
+        case zoomLimitEnabled
+        case zoomMinimum
+        case zoomMaximum
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -476,6 +482,9 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
         try container.encode(.leftThumbStickFunction, leftThumbStickFunction)
         try container.encode(.rightThumbStickFunction, rightThumbStickFunction)
         try container.encode(.zoomSpeed, zoomSpeed)
+        try container.encode(.zoomLimitEnabled, zoomLimitEnabled)
+        try container.encode(.zoomMinimum, zoomMinimum)
+        try container.encode(.zoomMaximum, zoomMaximum)
     }
 
     required init(from decoder: any Decoder) throws {
@@ -493,5 +502,8 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
             .unused
         )
         zoomSpeed = container.decode(.zoomSpeed, Float.self, 50)
+        zoomLimitEnabled = container.decode(.zoomLimitEnabled, Bool.self, false)
+        zoomMinimum = container.decode(.zoomMinimum, Float.self, 1)
+        zoomMaximum = container.decode(.zoomMaximum, Float.self, 10)
     }
 }

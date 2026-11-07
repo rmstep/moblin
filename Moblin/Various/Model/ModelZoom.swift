@@ -157,12 +157,19 @@ extension Model {
         setZoomX(x: zoom.xPinch * amount, rate: rate)
     }
 
-    func setZoomSpeed(speed: Float) {
+    func setZoomSpeed(speed: Float, minimumX: Float? = nil, maximumX: Float? = nil) {
         guard zoom.hasZoom else {
             return
         }
         if abs(speed) < 0.05 {
             _ = stopCameraZoom()
+            return
+        }
+        let x = speed > 0
+            ? min(maximumX ?? cameraZoomXMaximum, cameraZoomXMaximum)
+            : max(minimumX ?? cameraZoomXMinimum, cameraZoomXMinimum)
+        if (speed > 0 && zoom.x >= x) || (speed < 0 && zoom.x <= x) {
+            stopZoomSpeed()
             return
         }
         if !zoom.speedActive {
@@ -172,7 +179,6 @@ extension Model {
                 self?.updateZoomXFromCamera()
             }
         }
-        let x = speed > 0 ? cameraZoomXMaximum : cameraZoomXMinimum
         _ = setCameraZoomX(x: x, rate: 0.05 + 3 * pow(abs(speed), 2))
     }
 
