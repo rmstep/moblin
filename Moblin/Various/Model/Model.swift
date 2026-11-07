@@ -749,6 +749,7 @@ final class Model: NSObject, ObservableObject {
     var moveToGimbalPresetQueue: Deque<UUID> = []
     var moveToGimbalPresetQueueRunning = false
     var gimbalPresetLongPressTimers: [String: MainTimer] = [:]
+    var gameControllerZoomSpeed: Float = 0
     var latestKnownLocation: CLLocation?
     var slopePercent = 0.0
     var previousSlopeAltitude: Double? = 0.0

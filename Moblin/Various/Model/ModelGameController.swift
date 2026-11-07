@@ -90,6 +90,22 @@ extension Model {
             if !pressed {
                 instantReplay()
             }
+        case .instantReplay1:
+            if !pressed {
+                instantReplay(presetIndex: 0)
+            }
+        case .instantReplay2:
+            if !pressed {
+                instantReplay(presetIndex: 1)
+            }
+        case .instantReplay3:
+            if !pressed {
+                instantReplay(presetIndex: 2)
+            }
+        case .instantReplay4:
+            if !pressed {
+                instantReplay(presetIndex: 3)
+            }
         case .stopReplay:
             if !pressed {
                 replay.isPlaying = false
@@ -181,13 +197,16 @@ extension Model {
     }
 
     private func handleGameControllerThumbStick(
-        function: SettingsControllerThumbStickFunction,
+        _ gameController: GCController,
+        left: Bool,
         xValue: Float,
         yValue: Float
     ) {
-        guard function != .unused else {
+        guard let index = getGameControllerIndex(gameController) else {
             return
         }
+        let settings = database.gameControllers[index]
+        let function = left ? settings.leftThumbStickFunction : settings.rightThumbStickFunction
         switch function {
         case .unused:
             break
@@ -195,6 +214,22 @@ extension Model {
             let x = abs(xValue) > thumbStickDeadZone ? xValue : 0
             let y = abs(yValue) > thumbStickDeadZone ? yValue : 0
             setGimbalMovement(x: y, y: -x)
+        case .zoom:
+            let y = abs(yValue) > thumbStickDeadZone ? yValue : 0
+            handleGameControllerThumbStickZoom(y: y, zoomSpeed: settings.zoomSpeed)
+        }
+    }
+
+    private func handleGameControllerThumbStickZoom(y: Float, zoomSpeed: Float) {
+        let speed = (y * zoomSpeed / 50 * 20).rounded() / 20
+        guard speed != gameControllerZoomSpeed else {
+            return
+        }
+        gameControllerZoomSpeed = speed
+        if speed == 0 {
+            stopZoomSpeed()
+        } else {
+            setZoomSpeed(speed: speed)
         }
     }
 
@@ -214,7 +249,7 @@ extension Model {
         _ pressed: Bool
     ) {
         guard let index = getGameControllerIndex(gameController),
-              let name = button.sfSymbolsName,
+              let name = gameControllerButtonName(button),
               let button = database.gameControllers[index].buttons.first(where: { $0.name == name })
         else {
             return
@@ -240,12 +275,75 @@ extension Model {
         return nil
     }
 
-    @objc func handleGameControllerDidConnect(_ notification: Notification) {
-        guard let gameController = notification.object as? GCController,
-              let gamepad = gameController.extendedGamepad
-        else {
+    private func gameControllerButtonName(_ button: GCControllerButtonInput) -> String? {
+        button.sfSymbolsName ?? button.localizedName
+    }
+
+    private func addMissingGameControllerButtons(_ gameController: GCController,
+                                                 _ buttons: [GCControllerButtonInput])
+    {
+        guard let index = getGameControllerIndex(gameController) else {
             return
         }
+        let settings = database.gameControllers[index]
+        for button in buttons {
+            guard let name = gameControllerButtonName(button),
+                  !settings.buttons.contains(where: { $0.name == name })
+            else {
+                continue
+            }
+            let newButton = SettingsGameControllerButton()
+            newButton.name = name
+            newButton.text = button.localizedName ?? name
+            settings.buttons.append(newButton)
+        }
+    }
+
+    private func setupGenericGameController(_ gameController: GCController) {
+        let profile = gameController.physicalInputProfile
+        var buttons = Array(profile.allButtons)
+        var thumbSticks = 0
+        for dpad in profile.allDpads.sorted(by: { ($0.localizedName ?? "") < ($1.localizedName ?? "") }) {
+            if dpad.isAnalog {
+                let left = thumbSticks == 0
+                thumbSticks += 1
+                dpad.valueChangedHandler = { _, xValue, yValue in
+                    self.handleGameControllerThumbStick(gameController, left: left, xValue: xValue, yValue: yValue)
+                }
+            } else {
+                buttons += [dpad.up, dpad.down, dpad.left, dpad.right]
+            }
+        }
+        for button in buttons {
+            button.pressedChangedHandler = { button, value, pressed in
+                self.handleGameControllerButton(gameController, button, value, pressed)
+            }
+        }
+        addMissingGameControllerButtons(gameController, buttons)
+    }
+
+    @objc func handleGameControllerDidConnect(_ notification: Notification) {
+        guard let gameController = notification.object as? GCController else {
+            return
+        }
+        logger.info("game-controller: Connected \(gameController.vendorName ?? "unknown")")
+        if let index = gameControllers.firstIndex(of: nil) {
+            gameControllers[index] = gameController
+        } else {
+            gameControllers.append(gameController)
+        }
+        if let gamepad = gameController.extendedGamepad {
+            setupExtendedGameController(gameController, gamepad)
+        } else {
+            setupGenericGameController(gameController)
+        }
+        if let number = gameControllerNumber(gameController: gameController) {
+            makeToast(title: String(localized: "Game controller \(number) connected"))
+        }
+        updateGameControllers()
+    }
+
+    private func setupExtendedGameController(_ gameController: GCController, _ gamepad: GCExtendedGamepad) {
         gamepad.dpad.left.pressedChangedHandler = { button, value, pressed in
             self.handleGameControllerButton(gameController, button, value, pressed)
         }
@@ -286,28 +384,11 @@ extension Model {
             self.handleGameControllerButton(gameController, button, value, pressed)
         }
         gamepad.leftThumbstick.valueChangedHandler = { _, xValue, yValue in
-            guard let index = self.getGameControllerIndex(gameController) else {
-                return
-            }
-            let function = self.database.gameControllers[index].leftThumbStickFunction
-            self.handleGameControllerThumbStick(function: function, xValue: xValue, yValue: yValue)
+            self.handleGameControllerThumbStick(gameController, left: true, xValue: xValue, yValue: yValue)
         }
         gamepad.rightThumbstick.valueChangedHandler = { _, xValue, yValue in
-            guard let index = self.getGameControllerIndex(gameController) else {
-                return
-            }
-            let function = self.database.gameControllers[index].rightThumbStickFunction
-            self.handleGameControllerThumbStick(function: function, xValue: xValue, yValue: yValue)
+            self.handleGameControllerThumbStick(gameController, left: false, xValue: xValue, yValue: yValue)
         }
-        if let index = gameControllers.firstIndex(of: nil) {
-            gameControllers[index] = gameController
-        } else {
-            gameControllers.append(gameController)
-        }
-        if let number = gameControllerNumber(gameController: gameController) {
-            makeToast(title: String(localized: "Game controller \(number) connected"))
-        }
-        updateGameControllers()
     }
 
     @objc func handleGameControllerDidDisconnect(notification: Notification) {

@@ -29,6 +29,7 @@ enum SettingsGimbalMotion: Codable, CaseIterable {
 enum SettingsControllerThumbStickFunction: String, Codable, CaseIterable {
     case unused = "Unused"
     case gimbalPanTilt = "Gimbal pan and tilt"
+    case zoom = "Zoom"
 
     func toString() -> String {
         switch self {
@@ -36,6 +37,8 @@ enum SettingsControllerThumbStickFunction: String, Codable, CaseIterable {
             String(localized: "Unused")
         case .gimbalPanTilt:
             String(localized: "Gimbal pan and tilt")
+        case .zoom:
+            String(localized: "Zoom")
         }
     }
 
@@ -71,6 +74,10 @@ enum SettingsControllerFunction: String, Codable, CaseIterable {
     case macro = "Macro"
     case streamDeckLayout = "Stream deck layout"
     case instantReplay = "Instant replay"
+    case instantReplay1 = "Instant replay 1"
+    case instantReplay2 = "Instant replay 2"
+    case instantReplay3 = "Instant replay 3"
+    case instantReplay4 = "Instant replay 4"
     case stopReplay = "Stop replay"
     case snapshot = "Snapshot"
     case pauseTts = "Pause TTS"
@@ -133,6 +140,14 @@ enum SettingsControllerFunction: String, Codable, CaseIterable {
             String(localized: "Stream Deck layout")
         case .instantReplay:
             String(localized: "Instant replay")
+        case .instantReplay1:
+            String(localized: "Instant replay 1")
+        case .instantReplay2:
+            String(localized: "Instant replay 2")
+        case .instantReplay3:
+            String(localized: "Instant replay 3")
+        case .instantReplay4:
+            String(localized: "Instant replay 4")
         case .stopReplay:
             String(localized: "Stop replay")
         case .snapshot:
@@ -240,7 +255,7 @@ enum SettingsControllerFunction: String, Codable, CaseIterable {
             .general
         case .streamDeckLayout:
             .general
-        case .instantReplay:
+        case .instantReplay, .instantReplay1, .instantReplay2, .instantReplay3, .instantReplay4:
             .general
         case .stopReplay:
             .general
@@ -345,6 +360,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
     @Published var buttons: [SettingsGameControllerButton] = []
     @Published var leftThumbStickFunction: SettingsControllerThumbStickFunction = .unused
     @Published var rightThumbStickFunction: SettingsControllerThumbStickFunction = .unused
+    @Published var zoomSpeed: Float = 50
 
     init() {
         var button = SettingsGameControllerButton()
@@ -450,6 +466,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
         case buttons
         case leftThumbStickFunction
         case rightThumbStickFunction
+        case zoomSpeed
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -458,6 +475,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
         try container.encode(.buttons, buttons)
         try container.encode(.leftThumbStickFunction, leftThumbStickFunction)
         try container.encode(.rightThumbStickFunction, rightThumbStickFunction)
+        try container.encode(.zoomSpeed, zoomSpeed)
     }
 
     required init(from decoder: any Decoder) throws {
@@ -474,5 +492,6 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
             SettingsControllerThumbStickFunction.self,
             .unused
         )
+        zoomSpeed = container.decode(.zoomSpeed, Float.self, 50)
     }
 }
