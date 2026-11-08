@@ -11,7 +11,7 @@ struct GameControllersControllerSettingsView: View {
                     GameControllersControllerButtonSettingsView(model: model, button: button)
                 }
             }
-            Section("Thumb sticks") {
+            Section {
                 GameControllersControllerThumbStickSettingsView(
                     image: "l.joystick",
                     name: "Left",
@@ -22,8 +22,22 @@ struct GameControllersControllerSettingsView: View {
                     name: "Right",
                     function: $gameController.rightThumbStickFunction
                 )
+                GameControllersControllerThumbStickSettingsView(
+                    image: "dpad",
+                    name: "D-pad",
+                    function: $gameController.dpadFunction
+                )
+            } header: {
+                Text("Thumb sticks")
+            } footer: {
+                Text("""
+                Some controllers, like a single Joy-Con, report their stick as a D-pad. Set a function \
+                on the D-pad to use it like a stick. Its buttons then stop doing their own functions.
+                """)
             }
-            if gameController.leftThumbStickFunction == .zoom || gameController.rightThumbStickFunction == .zoom {
+            if gameController.leftThumbStickFunction == .zoom || gameController.rightThumbStickFunction == .zoom
+                || gameController.dpadFunction == .zoom
+            {
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack {

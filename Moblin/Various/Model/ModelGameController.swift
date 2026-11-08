@@ -2,6 +2,12 @@ import GameController
 
 private let thumbStickDeadZone: Float = 0.1
 
+private enum GameControllerStick {
+    case left
+    case right
+    case dpad
+}
+
 extension Model {
     func handleControllerFunction(buttonId: String,
                                   function: SettingsControllerFunction,
@@ -198,7 +204,7 @@ extension Model {
 
     private func handleGameControllerThumbStick(
         _ gameController: GCController,
-        left: Bool,
+        stick: GameControllerStick,
         xValue: Float,
         yValue: Float
     ) {
@@ -206,7 +212,14 @@ extension Model {
             return
         }
         let settings = database.gameControllers[index]
-        let function = left ? settings.leftThumbStickFunction : settings.rightThumbStickFunction
+        let function = switch stick {
+        case .left:
+            settings.leftThumbStickFunction
+        case .right:
+            settings.rightThumbStickFunction
+        case .dpad:
+            settings.dpadFunction
+        }
         switch function {
         case .unused:
             break
@@ -251,6 +264,8 @@ extension Model {
         _ pressed: Bool
     ) {
         guard let index = getGameControllerIndex(gameController),
+              !(button.collection is GCControllerDirectionPad
+                  && database.gameControllers[index].dpadFunction != .unused),
               let name = gameControllerButtonName(button),
               let button = database.gameControllers[index].buttons.first(where: { $0.name == name })
         else {
@@ -306,14 +321,16 @@ extension Model {
         var buttons = Array(profile.allButtons)
         var thumbSticks = 0
         for dpad in profile.allDpads.sorted(by: { ($0.localizedName ?? "") < ($1.localizedName ?? "") }) {
+            let stick: GameControllerStick
             if dpad.isAnalog {
-                let left = thumbSticks == 0
+                stick = thumbSticks == 0 ? .left : .right
                 thumbSticks += 1
-                dpad.valueChangedHandler = { _, xValue, yValue in
-                    self.handleGameControllerThumbStick(gameController, left: left, xValue: xValue, yValue: yValue)
-                }
             } else {
+                stick = .dpad
                 buttons += [dpad.up, dpad.down, dpad.left, dpad.right]
+            }
+            dpad.valueChangedHandler = { _, xValue, yValue in
+                self.handleGameControllerThumbStick(gameController, stick: stick, xValue: xValue, yValue: yValue)
             }
         }
         for button in buttons {
@@ -346,6 +363,9 @@ extension Model {
     }
 
     private func setupExtendedGameController(_ gameController: GCController, _ gamepad: GCExtendedGamepad) {
+        gamepad.dpad.valueChangedHandler = { _, xValue, yValue in
+            self.handleGameControllerThumbStick(gameController, stick: .dpad, xValue: xValue, yValue: yValue)
+        }
         gamepad.dpad.left.pressedChangedHandler = { button, value, pressed in
             self.handleGameControllerButton(gameController, button, value, pressed)
         }
@@ -386,10 +406,10 @@ extension Model {
             self.handleGameControllerButton(gameController, button, value, pressed)
         }
         gamepad.leftThumbstick.valueChangedHandler = { _, xValue, yValue in
-            self.handleGameControllerThumbStick(gameController, left: true, xValue: xValue, yValue: yValue)
+            self.handleGameControllerThumbStick(gameController, stick: .left, xValue: xValue, yValue: yValue)
         }
         gamepad.rightThumbstick.valueChangedHandler = { _, xValue, yValue in
-            self.handleGameControllerThumbStick(gameController, left: false, xValue: xValue, yValue: yValue)
+            self.handleGameControllerThumbStick(gameController, stick: .right, xValue: xValue, yValue: yValue)
         }
     }
 

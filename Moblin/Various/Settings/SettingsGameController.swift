@@ -360,6 +360,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
     @Published var buttons: [SettingsGameControllerButton] = []
     @Published var leftThumbStickFunction: SettingsControllerThumbStickFunction = .unused
     @Published var rightThumbStickFunction: SettingsControllerThumbStickFunction = .unused
+    @Published var dpadFunction: SettingsControllerThumbStickFunction = .unused
     @Published var zoomSpeed: Float = 50
     @Published var zoomLimitEnabled: Bool = false
     @Published var zoomMinimum: Float = 1
@@ -469,6 +470,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
         case buttons
         case leftThumbStickFunction
         case rightThumbStickFunction
+        case dpadFunction
         case zoomSpeed
         case zoomLimitEnabled
         case zoomMinimum
@@ -481,6 +483,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
         try container.encode(.buttons, buttons)
         try container.encode(.leftThumbStickFunction, leftThumbStickFunction)
         try container.encode(.rightThumbStickFunction, rightThumbStickFunction)
+        try container.encode(.dpadFunction, dpadFunction)
         try container.encode(.zoomSpeed, zoomSpeed)
         try container.encode(.zoomLimitEnabled, zoomLimitEnabled)
         try container.encode(.zoomMinimum, zoomMinimum)
@@ -501,6 +504,7 @@ class SettingsGameController: Codable, Identifiable, ObservableObject {
             SettingsControllerThumbStickFunction.self,
             .unused
         )
+        dpadFunction = container.decode(.dpadFunction, SettingsControllerThumbStickFunction.self, .unused)
         zoomSpeed = container.decode(.zoomSpeed, Float.self, 50)
         zoomLimitEnabled = container.decode(.zoomLimitEnabled, Bool.self, false)
         zoomMinimum = container.decode(.zoomMinimum, Float.self, 1)
