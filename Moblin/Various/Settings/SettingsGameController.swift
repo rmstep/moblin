@@ -78,6 +78,7 @@ enum SettingsControllerFunction: String, Codable, CaseIterable {
     case instantReplay2 = "Instant replay 2"
     case instantReplay3 = "Instant replay 3"
     case instantReplay4 = "Instant replay 4"
+    case saveReplay = "Save replay"
     case stopReplay = "Stop replay"
     case snapshot = "Snapshot"
     case pauseTts = "Pause TTS"
@@ -148,6 +149,8 @@ enum SettingsControllerFunction: String, Codable, CaseIterable {
             String(localized: "Instant replay 3")
         case .instantReplay4:
             String(localized: "Instant replay 4")
+        case .saveReplay:
+            String(localized: "Save replay")
         case .stopReplay:
             String(localized: "Stop replay")
         case .snapshot:
@@ -255,7 +258,7 @@ enum SettingsControllerFunction: String, Codable, CaseIterable {
             .general
         case .streamDeckLayout:
             .general
-        case .instantReplay, .instantReplay1, .instantReplay2, .instantReplay3, .instantReplay4:
+        case .instantReplay, .instantReplay1, .instantReplay2, .instantReplay3, .instantReplay4, .saveReplay:
             .general
         case .stopReplay:
             .general

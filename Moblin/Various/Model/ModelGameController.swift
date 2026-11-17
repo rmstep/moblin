@@ -112,6 +112,16 @@ extension Model {
             if !pressed {
                 instantReplay(presetIndex: 3)
             }
+        case .saveReplay:
+            if !pressed {
+                if stream.replay.enabled {
+                    _ = saveReplay { _ in
+                        self.makeToast(title: String(localized: "Replay saved"))
+                    }
+                } else {
+                    makeReplayIsNotEnabledToast()
+                }
+            }
         case .stopReplay:
             if !pressed {
                 replay.isPlaying = false
