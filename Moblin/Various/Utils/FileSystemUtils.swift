@@ -50,6 +50,12 @@ extension FileManager {
 }
 
 func getAvailableDiskSpace() -> UInt64? {
+    if let values = try? URL.homeDirectory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
+       let capacity = values.volumeAvailableCapacityForImportantUsage,
+       capacity > 0
+    {
+        return UInt64(capacity)
+    }
     guard let attributes = try? FileManager.default.attributesOfFileSystem(forPath: URL.homeDirectory.path())
     else {
         return nil
