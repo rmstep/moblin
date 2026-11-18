@@ -295,7 +295,8 @@ struct StreamSettingsView: View {
                 NavigationLink {
                     StreamReplaySettingsView(database: database,
                                              stream: stream,
-                                             replay: stream.replay)
+                                             replay: stream.replay,
+                                             replayDatabase: database.replay)
                 } label: {
                     IconAndTextSettingView(image: "play", text: "Replay")
                 }

@@ -168,9 +168,11 @@ class ReplayBuffer: @unchecked Sendable {
         }
     }
 
-    func createFile(completion: @escaping @Sendable (ReplayBufferFile?) -> Void) {
+    func createFile(maximumDuration: Double? = nil,
+                    completion: @escaping @Sendable (ReplayBufferFile?) -> Void)
+    {
         replayQueue.async {
-            self.createFileInternal(completion: completion)
+            self.createFileInternal(maximumDuration: maximumDuration, completion: completion)
         }
     }
 
@@ -186,9 +188,20 @@ class ReplayBuffer: @unchecked Sendable {
         }
     }
 
-    private func createFileInternal(completion: @escaping (ReplayBufferFile?) -> Void) {
+    private func createFileInternal(maximumDuration: Double?,
+                                    completion: @escaping (ReplayBufferFile?) -> Void)
+    {
         guard let initSegment, !dataSegments.isEmpty else {
             return completion(nil)
+        }
+        var firstIndex = 0
+        if let maximumDuration {
+            let stop = stopTime()
+            while firstIndex + 1 < dataSegments.count,
+                  stop - dataSegments[firstIndex + 1].startTime >= maximumDuration
+            {
+                firstIndex += 1
+            }
         }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).mp4")
         do {
@@ -196,7 +209,7 @@ class ReplayBuffer: @unchecked Sendable {
             let handle = try FileHandle(forWritingTo: url)
             handle.write(initSegment)
             var duration = 0.0
-            for segment in dataSegments {
+            for segment in dataSegments[firstIndex...] {
                 handle.write(segment.data)
                 duration += segment.duration
             }

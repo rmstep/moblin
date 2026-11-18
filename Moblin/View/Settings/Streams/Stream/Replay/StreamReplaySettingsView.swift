@@ -246,6 +246,7 @@ struct StreamReplaySettingsView: View {
     @ObservedObject var database: Database
     let stream: SettingsStream
     @ObservedObject var replay: SettingsStreamReplay
+    @ObservedObject var replayDatabase: SettingsReplay
 
     var body: some View {
         Form {
@@ -265,6 +266,15 @@ struct StreamReplaySettingsView: View {
                 }
             } footer: {
                 Text("Multiple instant replay buttons with their own name, duration, speed and layout.")
+            }
+            Section {
+                Picker("Save replay length", selection: $replayDatabase.saveLength) {
+                    ForEach([6.0, 10.0, 14.0, 20.0, 30.0], id: \.self) { length in
+                        Text(formatShortDuration(seconds: Int(length)))
+                    }
+                }
+            } footer: {
+                Text("Length of clips saved with a Save replay controller or keyboard button.")
             }
             if database.showAllSettings {
                 LayoutView(model: model, database: database, replay: replay)

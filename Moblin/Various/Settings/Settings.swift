@@ -593,6 +593,7 @@ class SettingsReplay: Codable, ObservableObject {
     @Published var stop: Double = SettingsReplay.stop
     @Published var speed: SettingsReplaySpeed = .one
     @Published var presets: [SettingsReplayPreset] = []
+    @Published var saveLength: Double = 10
 
     init() {}
 
@@ -601,6 +602,7 @@ class SettingsReplay: Codable, ObservableObject {
         case stop
         case speed
         case presets
+        case saveLength
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -609,6 +611,7 @@ class SettingsReplay: Codable, ObservableObject {
         try container.encode(.stop, stop)
         try container.encode(.speed, speed)
         try container.encode(.presets, presets)
+        try container.encode(.saveLength, saveLength)
     }
 
     required init(from decoder: any Decoder) throws {
@@ -617,6 +620,7 @@ class SettingsReplay: Codable, ObservableObject {
         stop = container.decode(.stop, Double.self, SettingsReplay.stop)
         speed = container.decode(.speed, SettingsReplaySpeed.self, .one)
         presets = container.decode(.presets, [SettingsReplayPreset].self, [])
+        saveLength = container.decode(.saveLength, Double.self, 10)
     }
 }
 

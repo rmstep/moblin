@@ -115,7 +115,11 @@ extension Model {
         case .saveReplay:
             if !pressed {
                 if stream.replay.enabled {
-                    _ = saveReplay { _ in
+                    let length = database.replay.saveLength
+                    _ = saveReplay(start: SettingsReplay.stop - length,
+                                   stop: SettingsReplay.stop,
+                                   maximumDuration: length)
+                    { _ in
                         self.makeToast(title: String(localized: "Replay saved"))
                     }
                 } else {

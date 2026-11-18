@@ -21,6 +21,7 @@ extension Model {
     func saveReplay(start: Double? = nil,
                     stop: Double? = nil,
                     delay: Int? = nil,
+                    maximumDuration: Double? = nil,
                     completion: (@MainActor (ReplaySettings) -> Void)? = nil) -> Bool
     {
         guard !replay.isSaving else {
@@ -35,7 +36,7 @@ extension Model {
         replay.isSaving = true
         let delay = delay ?? stream.replay.postTriggerDelay
         DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(delay)) {
-            self.replayBuffer.createFile { file in
+            self.replayBuffer.createFile(maximumDuration: maximumDuration) { file in
                 DispatchQueue.main.async {
                     self.replay.isSaving = false
                     guard let file else {
