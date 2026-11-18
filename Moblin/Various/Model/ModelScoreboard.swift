@@ -818,15 +818,13 @@ extension Model {
     }
 }
 
-private let scoreboardLogClockFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm:ss"
-    return formatter
-}()
-
 private func formatScoreboardLogElapsed(seconds: Double) -> String {
     let total = max(Int(seconds), 0)
-    return String(format: "%02d:%02d:%02d", total / 3600, (total / 60) % 60, total % 60)
+    if total >= 3600 {
+        return String(format: "%d:%02d:%02d", total / 3600, (total / 60) % 60, total % 60)
+    } else {
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
 }
 
 extension Model {
@@ -876,15 +874,11 @@ extension Model {
         guard !events.isEmpty else {
             return
         }
-        let now = Date()
-        let elapsed = formatScoreboardLogElapsed(seconds: now.timeIntervalSince(currentRecording.startTime))
-        let clock = scoreboardLogClockFormatter.string(from: now)
+        let elapsed = formatScoreboardLogElapsed(seconds: Date().timeIntervalSince(currentRecording.startTime))
+        let gameClock = "P\(new.global.period) \(old.global.timer)"
         var text = ""
-        if !FileManager.default.fileExists(atPath: url.path) {
-            text += "Recording time\tClock time\tEvent\n"
-        }
         for event in events {
-            text += "\(elapsed)\t\(clock)\t\(event)\n"
+            text += "\(elapsed) \(gameClock) \(event)\n"
         }
         guard let data = text.data(using: .utf8) else {
             return
