@@ -269,6 +269,9 @@ extension Model {
         logger.info("replay: No new video for 10 seconds. Restarting recorder.")
         replayLatestSegmentTime = now
         stopRecorderIfNeeded(forceStop: true)
+        if isRecording {
+            _ = resumeRecording()
+        }
         startRecorderIfNeeded(useRecordingUrl: false)
     }
 
