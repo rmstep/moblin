@@ -594,6 +594,7 @@ extension Model {
         }
         let scoreboard = widget.scoreboard
         let modular = scoreboard.modular
+        logScoreboardEvents(old: getModularScoreboardConfig(scoreboard: scoreboard), new: config)
         modular.config = config
         scoreboard.setModularSport(sportId: config.sportId)
         modular.setLayout(name: config.layout)
@@ -814,5 +815,93 @@ extension Model {
             return false
         }
         return isSetCompleted(score: score)
+    }
+}
+
+private let scoreboardLogClockFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm:ss"
+    return formatter
+}()
+
+private func formatScoreboardLogElapsed(seconds: Double) -> String {
+    let total = max(Int(seconds), 0)
+    return String(format: "%02d:%02d:%02d", total / 3600, (total / 60) % 60, total % 60)
+}
+
+extension Model {
+    private func scoreboardEvents(old: RemoteControlScoreboardMatchConfig,
+                                  new: RemoteControlScoreboardMatchConfig) -> [String]
+    {
+        guard old.sportId == new.sportId else {
+            return []
+        }
+        var events: [String] = []
+        let scoreLabel = new.controls["primaryScore"]?.label ?? "Score"
+        let score = "\(new.team1.name) \(new.team1.primaryScore) - \(new.team2.primaryScore) \(new.team2.name)"
+        for (oldTeam, newTeam) in [(old.team1, new.team1), (old.team2, new.team2)] {
+            if let oldValue = Int(oldTeam.primaryScore), let newValue = Int(newTeam.primaryScore),
+               newValue > oldValue
+            {
+                events.append("\(scoreLabel): \(newTeam.name) (\(score))")
+            }
+        }
+        if old.global.period != new.global.period {
+            events.append("Period: \(new.global.period)")
+        }
+        for (oldTeam, newTeam) in [(old.team1, new.team1), (old.team2, new.team2)] {
+            if let oldValue = Int(oldTeam.secondaryScore), let newValue = Int(newTeam.secondaryScore),
+               newValue > oldValue
+            {
+                let label = newTeam.secondaryScoreLabel ?? ""
+                let name = label == "SOG" ? "Shot on goal" : (label.isEmpty ? "Secondary score" : label)
+                events.append("\(name): \(newTeam.name) (\(newValue))")
+            }
+            if oldTeam.stat1 != "PP", newTeam.stat1 == "PP" {
+                events.append("Power play start: \(newTeam.name)")
+            } else if oldTeam.stat1 == "PP", newTeam.stat1 != "PP" {
+                events.append("Power play end: \(newTeam.name)")
+            }
+        }
+        return events
+    }
+
+    func logScoreboardEvents(old: RemoteControlScoreboardMatchConfig, new: RemoteControlScoreboardMatchConfig) {
+        guard let currentRecording,
+              let url = currentRecording.url()?.deletingPathExtension().appendingPathExtension("txt")
+        else {
+            return
+        }
+        let events = scoreboardEvents(old: old, new: new)
+        guard !events.isEmpty else {
+            return
+        }
+        let now = Date()
+        let elapsed = formatScoreboardLogElapsed(seconds: now.timeIntervalSince(currentRecording.startTime))
+        let clock = scoreboardLogClockFormatter.string(from: now)
+        var text = ""
+        if !FileManager.default.fileExists(atPath: url.path) {
+            text += "Recording time\tClock time\tEvent\n"
+        }
+        for event in events {
+            text += "\(elapsed)\t\(clock)\t\(event)\n"
+        }
+        guard let data = text.data(using: .utf8) else {
+            return
+        }
+        do {
+            if !FileManager.default.fileExists(atPath: url.path) {
+                try data.write(to: url)
+            } else {
+                let handle = try FileHandle(forWritingTo: url)
+                defer {
+                    try? handle.close()
+                }
+                try handle.seekToEnd()
+                try handle.write(contentsOf: data)
+            }
+        } catch {
+            logger.info("scoreboard: Failed to write event log: \(error)")
+        }
     }
 }
